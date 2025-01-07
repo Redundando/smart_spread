@@ -7,10 +7,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "smartspread"
-version = "0.1.0"
+version = "1.0.0"
+readme = "README.md"
 description = "A Python library that extends gspread for enhanced spreadsheet manipulation."
 authors = [
-    { name = "Your Name", email = "your.email@example.com" }
+    { name = "Arved Klöhn", email = "arved.kloehn@gmail.com" }
 ]
 readme = "README.md"
 requires-python = ">=3.7"
@@ -22,5 +23,5 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/yourusername/smartspread"
-"Repository" = "https://github.com/yourusername/smartspread"
+"Homepage" = "https://github.com/Redundando/smart_spread"
+"Repository" = "https://github.com/Redundando/smart_spread"
