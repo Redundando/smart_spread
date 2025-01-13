@@ -1,27 +1,95 @@
 import gspread
-from cacherator import JSONCache, Cached
+from cacherator import Cached, JSONCache
+from gspread import Spreadsheet
 from logorator import Logger
-import pandas as pd
+from typing import Union
+
+from smart_spread import smart_tab
+
 
 class SmartSpread(JSONCache):
+    """
+        A utility class for managing Google Sheets at the spreadsheet level.
+
+        SmartSpread provides functionality to interact with a Google spreadsheet,
+        including creating new spreadsheets, managing access, retrieving tabs, and
+        caching data for improved performance.
+
+        Attributes:
+            sheet_identifier (str): Identifier for the spreadsheet, either its name or ID.
+            directory (str): Directory for storing cached data.
+            user_email (str): Email of the user to share the spreadsheet with (optional).
+            key_file (str): Path to the Google service account key file for authentication.
+            clear_cache (bool): Whether to clear the cache on initialization.
+
+        Methods:
+            sheet: Retrieves the spreadsheet object, creating it if it doesn't exist.
+            create_sheet(): Creates a new spreadsheet.
+            grant_access(email, role): Grants access to the spreadsheet for a user.
+            url: Returns the URL of the spreadsheet.
+            tab(tab_name, data_format, keep_number_formatting, clear_cache):
+                Creates or retrieves a `SmartTab` object for the specified tab.
+            tab_names: Returns a list of tab names in the spreadsheet.
+            tab_exists(tab_name): Checks if a tab with the given name exists in the spreadsheet.
+        """
 
     def __init__(self,
                  sheet_identifier="",
-                 directory = "data/smart_spread",
-                 user_email = None,
-                 key_file = "",
-                 clear_cache = False):
+                 directory="data/smart_spread",
+                 user_email=None,
+                 key_file="",
+                 clear_cache=False):
+        """
+            Initializes a SmartSpread object for managing a Google spreadsheet.
+
+            Args:
+                sheet_identifier (str): Identifier for the spreadsheet, either its name or ID.
+                    - If the spreadsheet is not found, a new one can be created.
+                directory (str): Directory for storing cached data. Default is "data/smart_spread".
+                user_email (str): Email address to share the spreadsheet with. Default is None.
+                    - If provided, the email will be granted access to the spreadsheet.
+                key_file (str): Path to the Google service account key file used for authentication.
+                    - Required for accessing Google Sheets API.
+                clear_cache (bool): Whether to clear existing cache data on initialization. Default is False.
+
+            Raises:
+                ValueError: If the provided `key_file` is invalid or the authentication fails.
+            """
         super().__init__(directory=directory, data_id=f"{sheet_identifier}", clear_cache=clear_cache)
         self.user_email = user_email
         self.key_file = key_file
         self.sheet_identifier = sheet_identifier
         self.gc = gspread.service_account(filename=key_file)
 
+    def __str__(self):
+        return self.sheet.title
 
+    def __repr__(self):
+        return self.__str__()
 
     @property
     @Cached()
-    def sheet(self):
+    def sheet(self) -> Spreadsheet:
+        """
+            Retrieves the Google Sheets object associated with this SmartSpread instance.
+
+            This method attempts to open the spreadsheet by its ID or name.
+            If the spreadsheet does not exist, it creates a new one.
+
+            Returns:
+                gspread.Spreadsheet: The Google Sheets object representing the spreadsheet.
+
+            Raises:
+                gspread.exceptions.SpreadsheetNotFound: If the spreadsheet cannot be found
+                    and creating a new spreadsheet fails.
+
+            Notes:
+                - If the spreadsheet is found by ID, it logs success.
+                - If the spreadsheet is found by name after failing to locate it by ID,
+                  it also logs success.
+                - If neither method succeeds, a new spreadsheet is created, and a log
+                  entry is recorded.
+            """
         try:
             try:
                 # Attempt to open by ID
@@ -34,26 +102,62 @@ class SmartSpread(JSONCache):
             return sheet
         except gspread.exceptions.SpreadsheetNotFound:
             Logger.note(f"Spreadsheet '{self.sheet_identifier}' not found.")
-            return self.create_sheet()
+            return self._create_sheet()
 
     @Logger(mode="short")
-    def create_sheet(self):
+    def _create_sheet(self) -> Spreadsheet:
+        """
+            Creates a new Google spreadsheet with the identifier provided.
+
+            If a spreadsheet with the specified identifier does not exist, this method
+            creates a new one. Optionally, it grants access to a specified user email
+            with write permissions.
+
+            Returns:
+                gspread.Spreadsheet: The newly created Google spreadsheet object.
+
+            Raises:
+                Exception: If an error occurs while creating the spreadsheet or
+                           granting access.
+
+            Notes:
+                - If `user_email` is provided during initialization, it is granted write
+                  access to the spreadsheet.
+            """
         Logger.note(f"Creating a new spreadsheet ('{self.sheet_identifier}').", mode="short")
         try:
-            # Create a new spreadsheet if it does not exist
             new_sheet = self.gc.create(self.sheet_identifier)
             if self.user_email:
-                new_sheet.share(email_address=self.user_email,perm_type="user", role="writer")
+                new_sheet.share(email_address=self.user_email, perm_type="user", role="writer")
                 Logger.note(f"Access granted to {self.user_email}.", mode="short")
             return new_sheet
         except Exception as e:
             Logger.note(f"Error creating spreadsheet: {e}", mode="short")
             raise
 
-
-
     @Logger(mode="short")
-    def grant_access(self, email:str=None, role:str="owner"):
+    def grant_access(self, email: str = None, role: str = "owner"):
+        """
+            Grants access to the Google spreadsheet for a specific user.
+
+            This method allows sharing the spreadsheet with another user by providing
+            their email address and assigning them a specific role (e.g., owner, writer,
+            reader).
+
+            Args:
+                email (str): The email address of the user to share the spreadsheet with.
+                    - Required to identify the user to grant access.
+                role (str): The role to assign to the user. Default is "owner".
+                    - Supported roles: "owner", "writer", "reader".
+
+            Raises:
+                ValueError: If the spreadsheet has not been initialized or opened.
+                Exception: If there is an error during the access granting process.
+
+            Notes:
+                - The spreadsheet must already exist before calling this method.
+            """
+
         if not self.sheet:
             raise ValueError("No spreadsheet is currently opened. Please open or create a sheet first.")
         try:
@@ -68,12 +172,40 @@ class SmartSpread(JSONCache):
     def url(self):
         return self.sheet.url
 
+    @Cached()
+    def tab(self, tab_name: str="Sheet 1", data_format:Union["DataFrame", "list", "dict"]="DataFrame", keep_number_formatting:bool=False, clear_cache:bool=True) -> smart_tab.SmartTab:
+        """
+            Creates or retrieves a SmartTab object for a specific tab in the spreadsheet.
+
+            The `tab` method initializes a `SmartTab` object, allowing interaction with
+            an individual tab (worksheet) in the spreadsheet. If the tab does not
+            already exist, it will be created.
+
+            Args:
+                tab_name (str): The name of the tab (worksheet) to retrieve or create.
+                    - Default: "Sheet 1".
+                data_format (str): The format for the tab's data. Default is an empty string.
+                    - Supported formats: "DataFrame", "list", "dict".
+                keep_number_formatting (bool): Whether to preserve number formatting
+                    from Google Sheets. Default is False.
+                clear_cache (bool): Whether to clear cached data for the tab. Default is True.
+
+            Returns:
+                SmartTab: An instance of the SmartTab class for interacting with the specified tab.
+
+            Notes:
+                - The `SmartTab` object provides functionality for reading, writing, and
+                  updating data in the tab.
+                - This method integrates with caching to improve performance and reduce
+                  redundant API calls.
+            """
+        return smart_tab.SmartTab(sheet=self.sheet, tab_name=tab_name, data_format=data_format, keep_number_formatting=keep_number_formatting, clear_cache=clear_cache)
+
     @property
     @Cached()
     def tab_names(self):
         if not self.sheet:
             raise ValueError("No spreadsheet is currently opened. Please open a sheet first.")
-
         try:
             tab_names = [worksheet.title for worksheet in self.sheet.worksheets()]
             return tab_names
@@ -81,106 +213,6 @@ class SmartSpread(JSONCache):
             Logger.note(f"Error fetching tab names: {e}", mode="short")
             raise
 
-    @Cached()
-    @Logger(mode="short")
-    def get_tab_values(self, tab_name:str=None):
-        if not self.sheet:
-            Logger.note("No spreadsheet is currently opened. Please open or create a sheet first.", mode="short")
-            raise ValueError("No spreadsheet is currently opened. Please open or create a sheet first.")
-
-        try:
-            if tab_name is None:
-                tab_name = self.tab_names[0]
-            worksheet = self.sheet.worksheet(tab_name)
-            data = worksheet.get_all_values()
-            return data
-        except gspread.exceptions.WorksheetNotFound:
-            raise ValueError(f"Worksheet '{tab_name}' not found in spreadsheet '{self.sheet.title}'.")
-        except Exception as e:
-            Logger.note(f"Error retrieving data from worksheet '{tab_name}': {e}", mode="short")
-            raise
-
-    def tab_to_list(self, tab_name: str = None):
-        return self.get_tab_values(tab_name=tab_name)
-
-    @Cached()
-    def tab_to_flat_list(self, tab_name: str = None):
-        try:
-            data = self.get_tab_values(tab_name)
-            return [item for row in data for item in row]
-        except Exception as e:
-            Logger.note(f"Error converting tab values to list: {e}", mode="short")
-            raise
-
-    @Cached()
-    @Logger(mode="short")
-    def tab_to_dict(self, tab_name: str = None):
-        try:
-            data = self.get_tab_values(tab_name)
-            if len(data) < 2:
-                raise ValueError("Insufficient data to create a dictionary. Need at least headers and one row.")
-            headers = data[0]
-            rows = data[1:]
-            return [dict(zip(headers, row)) for row in rows]
-        except Exception as e:
-            Logger.note(f"Error converting tab values to dict: {e}", mode="short")
-            raise
-
-    @Cached()
-    @Logger(mode="short")
-    def tab_to_df(self, tab_name: str = None):
-        try:
-            data = self.get_tab_values(tab_name)
-            if len(data) < 2:
-                raise ValueError("Insufficient data to create a DataFrame. Need at least headers and one row.")
-            df = pd.DataFrame(data[1:], columns=data[0])
-            return df
-        except Exception as e:
-            Logger.note(f"Error converting tab values to DataFrame: {e}", mode="short")
-            raise
-
-    @Logger(mode="short")
-    def filter_rows_by_column(self, tab_name: str, column_name: str, pattern: str):
-        try:
-            df = self.tab_to_df(tab_name)
-            if column_name not in df.columns:
-                raise ValueError(f"Column '{column_name}' not found in the data.")
-            matching_rows = df[df[column_name].str.contains(pattern, na=False)]
-            return matching_rows
-        except Exception as e:
-            Logger.note(f"Error filtering rows by column '{column_name}': {e}", mode="short")
-            raise
-
-    @Logger(mode="short")
-    def update_row_by_column_pattern(self, tab_name: str, column_name: str, pattern: str, updates: dict):
-        try:
-            worksheet = self.sheet.worksheet(tab_name)
-            df = self.tab_to_df(tab_name)
-            if column_name not in df.columns:
-                raise ValueError(f"Column '{column_name}' not found in the data.")
-
-            # Find the first matching row index
-            matching_row_index = df[df[column_name].str.contains(pattern, na=False)].index[0]
-
-            # Add missing columns and apply updates
-            headers = df.columns.tolist()
-            row = worksheet.row_values(matching_row_index + 2)  # Adjust for 1-based index and header row
-            while len(row) < len(headers):
-                row.append("")
-
-            # Update only the modified columns
-            for col, value in updates.items():
-                if col not in headers:
-                    headers.append(col)
-                    worksheet.update_cell(1, len(headers), col)
-                col_idx = headers.index(col) + 1
-                worksheet.update_cell(matching_row_index + 2, col_idx, value)
-
-            Logger.note(f"Row updated successfully in tab '{tab_name}'.", mode="short")
-
-        except Exception as e:
-            Logger.note(f"Error updating row by column pattern: {e}", mode="short")
-            raise
 
 
     def tab_exists(self, tab_name: str) -> bool:
@@ -190,40 +222,3 @@ class SmartSpread(JSONCache):
             return True
         except gspread.exceptions.WorksheetNotFound:
             return False
-
-
-    @Logger(mode="short")
-    def write_to_tab(self, data, tab_name: str, overwrite_tab: bool = False):
-        try:
-            if self.tab_exists(tab_name):
-                worksheet = self.sheet.worksheet(tab_name)
-            else:
-                Logger.note(f"Tab '{tab_name}' not found. Creating new tab.")
-                worksheet = self.sheet.add_worksheet(title=tab_name, rows=1000, cols=26)
-
-            # Prepare data
-            if isinstance(data, pd.DataFrame):
-                values = [data.columns.tolist()] + data.values.tolist()
-            elif isinstance(data, list) and all(isinstance(row, dict) for row in data):
-                keys = list(data[0].keys())
-                values = [keys] + [[row.get(k, "") for k in keys] for row in data]
-            elif isinstance(data, list) and all(isinstance(row, list) for row in data):
-                values = data
-            else:
-                raise ValueError("Unsupported data format. Provide a DataFrame, List of Lists, or List of Dicts.")
-
-            # Overwrite behavior
-            if overwrite_tab:
-                worksheet.clear()
-                worksheet.update(values)
-            else:
-                # Prepare range for the batch update
-                start_cell = 'A1'
-                end_cell = f'{chr(65 + len(values[0]) - 1)}{len(values)}'  # Calculates range based on data size
-                worksheet.update(f'{start_cell}:{end_cell}', values)
-
-            Logger.note(f"Data written successfully to '{tab_name}'.",)
-
-        except Exception as e:
-            Logger.note(f"Error writing data to tab '{tab_name}': {e}")
-            raise
