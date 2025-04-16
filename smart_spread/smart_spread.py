@@ -2,7 +2,7 @@ import gspread
 from cacherator import Cached, JSONCache
 from gspread import Spreadsheet
 from logorator import Logger
-from typing import Union
+from typing import Union, Dict, Optional
 
 from smart_spread import smart_tab
 
@@ -33,36 +33,57 @@ class SmartSpread(JSONCache):
             tab_exists(tab_name): Checks if a tab with the given name exists in the spreadsheet.
         """
 
-    def __init__(self,
-                 sheet_identifier="",
-                 directory="data/smart_spread",
-                 user_email=None,
-                 key_file="",
-                 clear_cache=False):
+    def __init__(
+        self,
+        sheet_identifier: str = "",
+        directory: str = "data/smart_spread",
+        user_email: Optional[str] = None,
+        key_file: Optional[str] = None,
+        service_account_data: Optional[Dict] = None,
+        clear_cache: bool = False,
+    ):
         """
             Initializes a SmartSpread object for managing a Google spreadsheet.
 
             Args:
-                sheet_identifier (str): Identifier for the spreadsheet, either its name or ID.
-                    - If the spreadsheet is not found, a new one can be created.
-                directory (str): Directory for storing cached data. Default is "data/smart_spread".
-                user_email (str): Email address to share the spreadsheet with. Default is None.
-                    - If provided, the email will be granted access to the spreadsheet.
-                key_file (str): Path to the Google service account key file used for authentication.
-                    - Required for accessing Google Sheets API.
-                clear_cache (bool): Whether to clear existing cache data on initialization. Default is False.
+                sheet_identifier (str): Identifier for the spreadsheet (name or ID).
+                directory (str): Directory for storing cached data.
+                user_email (str): Email address to share the spreadsheet with.
+                key_file (str): Path to the Google service account JSON key file.
+                service_account_data (dict): Dictionary containing the service account JSON credentials.
+                clear_cache (bool): Whether to clear existing cache data on initialization.
 
             Raises:
-                ValueError: If the provided `key_file` is invalid or the authentication fails.
-            """
+                ValueError: If neither `key_file` nor `service_account_data` is provided,
+                            or if authentication fails.
+        """
+        # Initialize base JSONCache
         super().__init__(directory=directory, data_id=f"{sheet_identifier}", clear_cache=clear_cache)
+
         self.user_email = user_email
-        self.key_file = key_file
         self.sheet_identifier = sheet_identifier
-        self.gc = gspread.service_account(filename=key_file)
+
+        # Decide how to authenticate with gspread
+        if service_account_data:
+            # Auth from dict
+            try:
+                self.gc = gspread.service_account_from_dict(service_account_data)
+            except Exception as e:
+                Logger.note(f"Failed to authenticate using service_account_data: {e}", mode="short")
+                raise ValueError("Invalid service_account_data provided") from e
+        elif key_file:
+            # Auth from file
+            try:
+                self.gc = gspread.service_account(filename=key_file)
+            except Exception as e:
+                Logger.note(f"Failed to authenticate using key_file: {e}", mode="short")
+                raise ValueError("Invalid key_file provided") from e
+        else:
+            raise ValueError("Must provide either a 'key_file' path or 'service_account_data' for authentication.")
+
 
     def __str__(self):
-        return self.sheet.title
+        return self.sheet_identifier
 
     def __repr__(self):
         return self.__str__()

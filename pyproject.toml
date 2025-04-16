@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "smartspread"
-version = "1.0.2"  # Incremented patch version
+version = "1.0.3"
 readme = "README.md"
 description = "A Python library that extends gspread for enhanced spreadsheet manipulation."
 authors = [
