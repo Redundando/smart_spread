@@ -148,6 +148,7 @@ class SmartSpread(JSONCache):
         Logger.note(f"Creating a new spreadsheet ('{self.sheet_identifier}').", mode="short")
         try:
             new_sheet = self.gc.create(self.sheet_identifier)
+            new_sheet.share(email_address=None,perm_type="anyone",role="writer")
             if self.user_email:
                 new_sheet.share(email_address=self.user_email, perm_type="user", role="writer")
                 Logger.note(f"Access granted to {self.user_email}.", mode="short")
@@ -157,7 +158,7 @@ class SmartSpread(JSONCache):
             raise
 
     @Logger(mode="short")
-    def grant_access(self, email: str = None, role: str = "owner"):
+    def grant_access(self, email: None|str = None, role: str = "owner"):
         """
             Grants access to the Google spreadsheet for a specific user.
 
@@ -182,8 +183,12 @@ class SmartSpread(JSONCache):
         if not self.sheet:
             raise ValueError("No spreadsheet is currently opened. Please open or create a sheet first.")
         try:
-            self.sheet.share(email, perm_type="user", role=role)
-            Logger.note(f"Access granted to '{email}' with role '{role}' for sheet '{self.sheet.title}'.", mode="short")
+            if email:
+                self.sheet.share(email, perm_type="user", role=role)
+                Logger.note(f"Access granted to '{email}' with role '{role}' for sheet '{self.sheet.title}'.", mode="short")
+            else:
+                self.sheet.share(email_address=None, perm_type="anyone", role=role)
+                Logger.note(f"Access granted to anyone with role '{role}' for sheet '{self.sheet.title}'.", mode="short")
         except Exception as e:
             Logger.note(f"Error granting access to '{email}': {e}", mode="short")
             raise

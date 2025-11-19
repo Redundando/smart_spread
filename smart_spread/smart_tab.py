@@ -2,7 +2,7 @@ import hashlib
 import json
 import threading
 import time
-from typing import Union
+from typing import Union, Literal
 
 import gspread
 import pandas as pd
@@ -60,7 +60,7 @@ class SmartTab(JSONCache):
     def __init__(self,
                  sheet: gspread.Spreadsheet,
                  tab_name="",
-                 data_format: Union["DataFrame", "list", "dict"] = "DataFrame",
+                 data_format: Literal["DataFrame", "list", "dict"] = "DataFrame",
                  keep_number_formatting: bool = False,
                  clear_cache: bool = True):
         """
@@ -428,11 +428,11 @@ class SmartTab(JSONCache):
                 df.at[row_index, update_column] = update_value
 
         # Update self.data to reflect changes
-        if self.data_format == "dataframe":
+        if self.data_format.lower() == "dataframe":
             self.data = df
-        if self.data_format == "dict":
+        if self.data_format.lower() == "dict":
             self.data = df.to_dict(orient="records")
-        if self.data_format == "list":
+        if self.data_format.lower() == "list":
             self.data = [df.columns.tolist()] + df.values.tolist()
 
 
