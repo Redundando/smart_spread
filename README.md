@@ -1,80 +1,134 @@
 # SmartSpread
 
-SmartSpread is a Python library that extends [gspread](https://gspread.readthedocs.io/) with advanced features for managing and manipulating Google Sheets. It offers a higher-level API for spreadsheet and tab operations, seamless integration with Pandas, and automation capabilities like background data syncing.
+A Python library for Google Sheets that extends [gspread](https://gspread.readthedocs.io/) with a high-level API, automatic type inference, and efficient caching.
 
 ## Features
 
-- **Spreadsheet Management**:
-  - Create and retrieve spreadsheets with ease.
-  - Grant access to collaborators programmatically.
-
-- **Tab Operations**:
-  - Create, read, write, and update individual tabs.
-  - Support for multiple data formats: `DataFrame`, `list[dict]`, and `list[list]`.
-
-- **Automation**:
-  - Background writing to Google Sheets at regular intervals.
-  - Efficient caching to minimize redundant API calls.
-
-- **Pandas Integration**:
-  - Convert Google Sheets data to Pandas DataFrames and vice versa.
-  - Seamless handling of numeric, string, and date formats.
+- **Simple API**: Intuitive interface for spreadsheet and tab operations
+- **Multiple Data Formats**: Work with DataFrames, list of dicts, or list of lists
+- **Automatic Type Inference**: Smart conversion of numeric, string, and None values
+- **Efficient Caching**: Minimizes API calls to stay within rate limits
+- **Pandas Integration**: Seamless DataFrame read/write operations
+- **Row Operations**: Update or insert rows based on column patterns
 
 ## Installation
-
-Install the library using `pip`:
 
 ```bash
 pip install smartspread
 ```
 
-## Getting Started
+## Quick Start
+
 ### Authentication
-- Set up a Google Cloud Project and enable the Google Sheets API.
-- Create a service account and download the credentials JSON file.
-- Share your spreadsheet with the service account email.
-## Example Usage
-### Initialize a Spreadsheet
+
+1. Create a [Google Cloud Project](https://console.cloud.google.com/)
+2. Enable the Google Sheets API
+3. Create a service account and download credentials JSON
+4. Share your spreadsheet with the service account email
+
+### Basic Usage
+
 ```python
 from smart_spread import SmartSpread
 
-# Initialize SmartSpread with a Google Sheets ID and credentials file
+# Initialize with credentials
 spread = SmartSpread(
     sheet_identifier="your-spreadsheet-id-or-name",
     key_file="path/to/credentials.json"
 )
-```
-### Work with Tabs
-```python
 
 # Get or create a tab
-tab = spread.tab(tab_name="MyTab", data_format="DataFrame")
+tab = spread.tab("MyTab")
 
-# Read data as a Pandas DataFrame
+# Read data as DataFrame
 df = tab.read_data()
-print(df)
 
-# Update rows based on a column value
-tab.update_row_by_column_pattern(
-    column="Name",
-    value="Alice",
-    updates={"Age": 30, "City": "New York"}
-)
+# Modify data
+tab.data["new_column"] = "value"
 
-# Write updated data back to the tab
+# Write back to Google Sheets
 tab.write_data(overwrite_tab=True)
 ```
-### Automate Background Writing
+
+### Update Rows by Pattern
+
 ```python
-
-# Start background writing every 15 seconds
-tab.start_background_write(interval=15, overwrite_tab=True)
-
-# Stop background writing
-tab.stop_background_write()
+# Update existing row or insert new one
+tab.update_row_by_column_pattern(
+    column="ID",
+    value=123,
+    updates={"Status": "completed", "Updated": "2024-01-01"}
+)
+tab.write_data(overwrite_tab=True)
 ```
-## Documentation
-Homepage: [SmartSpread GitHub](https://github.com/Redundando/smart_spread)
+
+### Filter Data
+
+```python
+# Filter rows by pattern
+filtered = tab.filter_rows_by_column("Name", "Alice")
+print(filtered)
+```
+
+### Work with Different Formats
+
+```python
+# DataFrame format (default)
+tab_df = spread.tab("Sheet1", data_format="DataFrame")
+df = tab_df.data  # pandas DataFrame
+
+# List of dicts format
+tab_dict = spread.tab("Sheet2", data_format="dict")
+data = tab_dict.data  # [{"col1": "val1", ...}, ...]
+
+# List of lists format
+tab_list = spread.tab("Sheet3", data_format="list")
+data = tab_list.data  # [["header1", "header2"], ["val1", "val2"], ...]
+```
+
+### Refresh Data
+
+```python
+# Reload data after external changes
+tab.refresh()
+
+# Refresh spreadsheet metadata
+spread.refresh()
+```
+
+## API Reference
+
+### SmartSpread
+
+- `SmartSpread(sheet_identifier, key_file=None, service_account_data=None, user_email=None)`
+- `spread.tab(tab_name, data_format="DataFrame", keep_number_formatting=False)` - Get or create tab
+- `spread.tab_names` - List all tab names
+- `spread.tab_exists(tab_name)` - Check if tab exists
+- `spread.url` - Get spreadsheet URL
+- `spread.grant_access(email, role="owner")` - Grant access to user
+- `spread.refresh()` - Clear cache and reload metadata
+
+### SmartTab
+
+- `tab.read_data()` - Read data from Google Sheets
+- `tab.write_data(overwrite_tab=False, as_table=False)` - Write data to Google Sheets
+- `tab.update_row_by_column_pattern(column, value, updates)` - Update or insert row
+- `tab.filter_rows_by_column(column, pattern)` - Filter rows by pattern
+- `tab.refresh()` - Reload data from Google Sheets
+- `tab.data` - Access the data (DataFrame, list of dicts, or list of lists)
+
+## Notes
+
+- Google Sheets API has rate limits (60 requests/minute for free tier)
+- SmartSpread uses caching to minimize API calls
+- Empty cells are represented as `None` in DataFrames
+- Integer columns use nullable `Int64` dtype to preserve `None` values
 
 ## License
-This project is licensed under the MIT License. See the LICENSE file for details.
+
+MIT License - see LICENSE file for details.
+
+## Links
+
+- [GitHub Repository](https://github.com/Redundando/smart_spread)
+- [PyPI Package](https://pypi.org/project/smartspread/)

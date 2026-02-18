@@ -7,28 +7,48 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "smartspread"
-version = "1.0.7"
+version = "1.1.0"
 readme = "README.md"
-description = "A Python library that extends gspread for enhanced spreadsheet manipulation."
+description = "A Python library for Google Sheets with high-level API, automatic type inference, and efficient caching."
 authors = [
     { name = "Arved Klöhn", email = "arved.kloehn@gmail.com" }
 ]
-keywords = ["google-sheets", "gspread", "pandas", "spreadsheet", "automation"]
+keywords = ["google-sheets", "gspread", "pandas", "spreadsheet", "automation", "dataframe"]
+license = { text = "MIT" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Spreadsheet",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
 
 requires-python = ">=3.7"
 dependencies = [
     "gspread>=5.0.0",
     "pandas>=1.3.0",
-    "cacherator>=0.1.0",
     "logorator>=0.1.0"
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/Redundando/smart_spread"
 "Repository" = "https://github.com/Redundando/smart_spread"
-"Issues" = "https://github.com/Redundando/smart_spread/issues"  # Add an Issues URL
-"Documentation" = "https://github.com/Redundando/smart_spread#readme"  # Add a documentation link
+"Issues" = "https://github.com/Redundando/smart_spread/issues"
+"Documentation" = "https://github.com/Redundando/smart_spread#readme"
 
 [tool.setuptools]
 packages = ["smart_spread"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 

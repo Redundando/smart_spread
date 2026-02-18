@@ -1,4 +1,0 @@
-cacherator
-gspread
-logorator
-pandas
