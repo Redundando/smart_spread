@@ -29,7 +29,7 @@ pip install smartspread
 ### Basic Usage
 
 ```python
-from smart_spread import SmartSpread
+from smartspread import SmartSpread
 
 # Initialize with credentials
 spread = SmartSpread(
@@ -125,6 +125,10 @@ spread.refresh()
 - Integer columns use nullable `Int64` dtype to preserve `None` values
 
 ## Changelog
+
+### v1.1.2 (2024)
+- Changed: Package renamed to `smartspread` (no underscore) for cleaner imports
+- Added: Backwards compatibility for `from smart_spread import ...` with deprecation warning
 
 ### v1.1.1 (2024)
 - Fixed: JSON serialization error when using `data_format="list"` with nullable Int64 columns containing `pd.NA` values

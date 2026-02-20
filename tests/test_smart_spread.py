@@ -2,8 +2,8 @@ import json
 import pytest
 import pandas as pd
 import time
-from smart_spread import SmartSpread, SmartTab
-from smart_spread.smart_tab import _calculate_data_hash
+from smartspread import SmartSpread, SmartTab
+from smartspread.smart_tab import _calculate_data_hash
 
 
 @pytest.fixture(scope="session")

@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "smartspread"
-version = "1.1.1"
+version = "1.1.2"
 readme = "README.md"
 description = "A Python library for Google Sheets with high-level API, automatic type inference, and efficient caching."
 authors = [
@@ -44,7 +44,8 @@ dependencies = [
 "Documentation" = "https://github.com/Redundando/smart_spread#readme"
 
 [tool.setuptools]
-packages = ["smart_spread"]
+packages = ["smartspread"]
+py-modules = ["smart_spread"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
