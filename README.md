@@ -124,6 +124,11 @@ spread.refresh()
 - Empty cells are represented as `None` in DataFrames
 - Integer columns use nullable `Int64` dtype to preserve `None` values
 
+## Changelog
+
+### v1.1.1 (2024)
+- Fixed: JSON serialization error when using `data_format="list"` with nullable Int64 columns containing `pd.NA` values
+
 ## License
 
 MIT License - see LICENSE file for details.

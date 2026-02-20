@@ -12,7 +12,15 @@ def _calculate_data_hash(data: Union[pd.DataFrame, list[dict], list[list]]):
     if isinstance(data, pd.DataFrame):
         data_bytes = pd.util.hash_pandas_object(data, index=True).values.tobytes()
     elif isinstance(data, list):
-        data_bytes = json.dumps(data, sort_keys=True).encode("utf-8")
+        def sanitize(obj):
+            if isinstance(obj, list):
+                return [sanitize(item) for item in obj]
+            elif isinstance(obj, dict):
+                return {k: sanitize(v) for k, v in obj.items()}
+            elif pd.isna(obj):
+                return None
+            return obj
+        data_bytes = json.dumps(sanitize(data), sort_keys=True).encode("utf-8")
     else:
         raise TypeError("Unsupported data type for hashing.")
     return hashlib.md5(data_bytes).hexdigest()

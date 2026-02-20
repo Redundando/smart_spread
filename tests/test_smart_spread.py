@@ -3,6 +3,7 @@ import pytest
 import pandas as pd
 import time
 from smart_spread import SmartSpread, SmartTab
+from smart_spread.smart_tab import _calculate_data_hash
 
 
 @pytest.fixture(scope="session")
@@ -290,3 +291,26 @@ class TestRefresh:
         tab.refresh()
         assert tab._stored_data_hash == old_hash
         assert isinstance(tab.data, pd.DataFrame)
+
+
+class TestDataHash:
+    
+    def test_hash_with_pd_na_in_list(self):
+        df = pd.DataFrame({'id': [1, 2, None], 'name': ['Alice', 'Bob', 'Charlie']})
+        df['id'] = df['id'].astype('Int64')
+        data_as_list = [df.columns.tolist()] + df.values.tolist()
+        hash_value = _calculate_data_hash(data_as_list)
+        assert isinstance(hash_value, str)
+    
+    def test_hash_with_pd_na_in_dict(self):
+        df = pd.DataFrame({'id': [1, None], 'name': ['Alice', 'Bob']})
+        df['id'] = df['id'].astype('Int64')
+        data_as_dict = df.to_dict(orient='records')
+        hash_value = _calculate_data_hash(data_as_dict)
+        assert isinstance(hash_value, str)
+    
+    def test_hash_with_dataframe(self):
+        df = pd.DataFrame({'id': [1, None], 'name': ['Alice', 'Bob']})
+        df['id'] = df['id'].astype('Int64')
+        hash_value = _calculate_data_hash(df)
+        assert isinstance(hash_value, str)
