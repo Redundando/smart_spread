@@ -314,3 +314,29 @@ class TestDataHash:
         df['id'] = df['id'].astype('Int64')
         hash_value = _calculate_data_hash(df)
         assert isinstance(hash_value, str)
+    
+    def test_list_format_sanitizes_pd_na(self, spread):
+        df = pd.DataFrame({'id': [1, None], 'name': ['Alice', 'Bob']})
+        tab = spread.tab(tab_name="TestTab_ListNA", data_format="DataFrame")
+        tab.data = df
+        tab._stored_data_hash = None
+        tab.write_data(overwrite_tab=True)
+        
+        tab_list = spread.tab(tab_name="TestTab_ListNA", data_format="list")
+        # Verify no pd.NA in output
+        import json
+        json.dumps(tab_list.data)  # Should not raise TypeError
+        assert tab_list.data[2][0] is None  # Second row, first column should be None
+    
+    def test_dict_format_sanitizes_pd_na(self, spread):
+        df = pd.DataFrame({'id': [1, None], 'name': ['Alice', 'Bob']})
+        tab = spread.tab(tab_name="TestTab_DictNA", data_format="DataFrame")
+        tab.data = df
+        tab._stored_data_hash = None
+        tab.write_data(overwrite_tab=True)
+        
+        tab_dict = spread.tab(tab_name="TestTab_DictNA", data_format="dict")
+        # Verify no pd.NA in output
+        import json
+        json.dumps(tab_dict.data)  # Should not raise TypeError
+        assert tab_dict.data[1]['id'] is None  # Second row id should be None

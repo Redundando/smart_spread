@@ -126,6 +126,9 @@ spread.refresh()
 
 ## Changelog
 
+### v1.1.3 (2024)
+- Fixed: pd.NA values now properly sanitized to None in list and dict output formats
+
 ### v1.1.2 (2024)
 - Changed: Package renamed to `smartspread` (no underscore) for cleaner imports
 - Added: Backwards compatibility for `from smart_spread import ...` with deprecation warning

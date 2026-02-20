@@ -183,9 +183,10 @@ class SmartTab:
 
             Logger.note(f"Tab '{self.tab_name}' successfully read as DataFrame.")
             if self.data_format == "dict":
-                return df.to_dict(orient="records")
+                result = df.to_dict(orient="records")
+                return [{k: (None if pd.isna(v) else v) for k, v in row.items()} for row in result]
             if self.data_format == "list":
-                return [df.columns.tolist()] + df.values.tolist()
+                return [df.columns.tolist()] + [[None if pd.isna(v) else v for v in row] for row in df.values.tolist()]
             return df
         except Exception as e:
             Logger.note(f"Error reading tab '{self.tab_name}': {e}")
