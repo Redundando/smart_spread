@@ -1,146 +1,153 @@
 # SmartSpread
 
-A Python library for Google Sheets that extends [gspread](https://gspread.readthedocs.io/) with a high-level API, automatic type inference, and efficient caching.
+Python library for Google Sheets operations with automatic type inference, caching, and multiple data format support. Built on [gspread](https://gspread.readthedocs.io/).
 
-## Features
+## Core Concepts
 
-- **Simple API**: Intuitive interface for spreadsheet and tab operations
-- **Multiple Data Formats**: Work with DataFrames, list of dicts, or list of lists
-- **Automatic Type Inference**: Smart conversion of numeric, string, and None values
-- **Efficient Caching**: Minimizes API calls to stay within rate limits
-- **Pandas Integration**: Seamless DataFrame read/write operations
-- **Row Operations**: Update or insert rows based on column patterns
+**Two main classes:**
+- `SmartSpread`: Represents a Google Sheets spreadsheet, manages authentication and tab access
+- `SmartTab`: Represents a single worksheet tab, handles data read/write operations
 
-## Installation
+**Three data formats:**
+- `DataFrame`: pandas DataFrame (default) - best for data manipulation
+- `dict`: List of dictionaries - each row is a dict with column names as keys
+- `list`: List of lists - first row is headers, remaining rows are data
+
+**Type inference:**
+- Empty cells → `None`
+- Integers → nullable `Int64` dtype (preserves `None`)
+- Floats → `float64`
+- Strings → `object` dtype
+- Empty columns → inferred as needed when data is added
+
+**Caching behavior:**
+- Data is cached after first read to minimize API calls
+- Hash comparison prevents unnecessary writes
+- Use `refresh()` to reload from Google Sheets after external changes
+
+## Installation & Setup
 
 ```bash
 pip install smartspread
 ```
 
-## Quick Start
+**Authentication requirements:**
+1. Google Cloud Project with Sheets API enabled
+2. Service account credentials JSON file
+3. Spreadsheet shared with service account email
 
-### Authentication
+## Usage Patterns
 
-1. Create a [Google Cloud Project](https://console.cloud.google.com/)
-2. Enable the Google Sheets API
-3. Create a service account and download credentials JSON
-4. Share your spreadsheet with the service account email
-
-### Basic Usage
-
+### Basic workflow
 ```python
 from smartspread import SmartSpread
 
-# Initialize with credentials
 spread = SmartSpread(
-    sheet_identifier="your-spreadsheet-id-or-name",
-    key_file="path/to/credentials.json"
+    sheet_identifier="spreadsheet-id-or-name",
+    key_file="credentials.json"
 )
-
-# Get or create a tab
-tab = spread.tab("MyTab")
-
-# Read data as DataFrame
-df = tab.read_data()
-
-# Modify data
-tab.data["new_column"] = "value"
-
-# Write back to Google Sheets
-tab.write_data(overwrite_tab=True)
+tab = spread.tab("MyTab")  # Get or create tab
+tab.data["new_column"] = "value"  # Modify DataFrame
+tab.write_data(overwrite_tab=True)  # Write to Sheets
 ```
 
-### Update Rows by Pattern
-
+### Data format selection
 ```python
-# Update existing row or insert new one
+tab_df = spread.tab("Sheet1", data_format="DataFrame")  # pandas DataFrame
+tab_dict = spread.tab("Sheet2", data_format="dict")     # [{"col": "val"}, ...]
+tab_list = spread.tab("Sheet3", data_format="list")     # [["header"], ["val"], ...]
+```
+
+### Update or insert rows
+```python
+# Updates existing row where ID=123, or inserts new row if not found
 tab.update_row_by_column_pattern(
     column="ID",
     value=123,
-    updates={"Status": "completed", "Updated": "2024-01-01"}
+    updates={"Status": "completed", "Date": "2024-01-01"}
 )
 tab.write_data(overwrite_tab=True)
 ```
 
-### Filter Data
-
+### Filter and refresh
 ```python
-# Filter rows by pattern
-filtered = tab.filter_rows_by_column("Name", "Alice")
-print(filtered)
-```
-
-### Work with Different Formats
-
-```python
-# DataFrame format (default)
-tab_df = spread.tab("Sheet1", data_format="DataFrame")
-df = tab_df.data  # pandas DataFrame
-
-# List of dicts format
-tab_dict = spread.tab("Sheet2", data_format="dict")
-data = tab_dict.data  # [{"col1": "val1", ...}, ...]
-
-# List of lists format
-tab_list = spread.tab("Sheet3", data_format="list")
-data = tab_list.data  # [["header1", "header2"], ["val1", "val2"], ...]
-```
-
-### Refresh Data
-
-```python
-# Reload data after external changes
-tab.refresh()
-
-# Refresh spreadsheet metadata
-spread.refresh()
+filtered = tab.filter_rows_by_column("Name", "Alice")  # Returns DataFrame
+tab.refresh()  # Reload from Sheets after external changes
 ```
 
 ## API Reference
 
-### SmartSpread
+### SmartSpread(sheet_identifier, key_file=None, service_account_data=None, user_email=None)
+**Constructor parameters:**
+- `sheet_identifier`: Spreadsheet ID or name
+- `key_file`: Path to service account JSON credentials
+- `service_account_data`: Dict of credentials (alternative to key_file)
+- `user_email`: Email for user-based auth (alternative to service account)
 
-- `SmartSpread(sheet_identifier, key_file=None, service_account_data=None, user_email=None)`
-- `spread.tab(tab_name, data_format="DataFrame", keep_number_formatting=False)` - Get or create tab
-- `spread.tab_names` - List all tab names
-- `spread.tab_exists(tab_name)` - Check if tab exists
-- `spread.url` - Get spreadsheet URL
-- `spread.grant_access(email, role="owner")` - Grant access to user
-- `spread.refresh()` - Clear cache and reload metadata
+**Methods:**
+- `tab(tab_name, data_format="DataFrame", keep_number_formatting=False)` → SmartTab
+- `refresh()` → None (clears cache, reloads metadata)
+- `grant_access(email, role="owner")` → None
+
+**Properties:**
+- `tab_names` → list[str]
+- `url` → str
+- `tab_exists(tab_name)` → bool
 
 ### SmartTab
+**Attributes:**
+- `data`: DataFrame | list[dict] | list[list] (mutable, modify directly)
+- `tab_name`: str
+- `data_format`: "DataFrame" | "dict" | "list"
 
-- `tab.read_data()` - Read data from Google Sheets
-- `tab.write_data(overwrite_tab=False, as_table=False)` - Write data to Google Sheets
-- `tab.update_row_by_column_pattern(column, value, updates)` - Update or insert row
-- `tab.filter_rows_by_column(column, pattern)` - Filter rows by pattern
-- `tab.refresh()` - Reload data from Google Sheets
-- `tab.data` - Access the data (DataFrame, list of dicts, or list of lists)
+**Methods:**
+- `read_data()` → DataFrame | list[dict] | list[list]
+- `write_data(overwrite_tab=False, as_table=False)` → None
+- `update_row_by_column_pattern(column, value, updates)` → None (modifies `data` in-place)
+- `filter_rows_by_column(column, pattern)` → DataFrame
+- `refresh()` → None (reloads from Sheets)
 
-## Notes
+## Important Implementation Details
 
-- Google Sheets API has rate limits (60 requests/minute for free tier)
-- SmartSpread uses caching to minimize API calls
-- Empty cells are represented as `None` in DataFrames
-- Integer columns use nullable `Int64` dtype to preserve `None` values
+**Type handling:**
+- Empty cells → `None` (not empty string)
+- Nullable integers use `Int64` dtype (not `int64`)
+- Mixed-type columns automatically convert to `object` dtype when needed
+- `pd.NA` values are sanitized to `None` in dict/list formats
+- NaN values are converted to empty strings before writing to Sheets
+
+**Write behavior:**
+- `write_data()` only writes if data hash has changed
+- `overwrite_tab=True` clears entire tab before writing
+- `overwrite_tab=False` updates only the data range
+- `as_table=True` adds header formatting and freeze
+
+**Rate limits:**
+- Google Sheets API: 60 requests/minute (free tier)
+- Caching minimizes API calls automatically
+
+**Error handling:**
+- Empty tabs raise `ValueError` on read
+- Missing columns are auto-created with `None` values
+- Type mismatches trigger automatic dtype conversion
 
 ## Changelog
 
+### v1.1.4 (2024)
+- Fixed: TypeError when writing strings to float64 columns in update_row_by_column_pattern
+- Fixed: InvalidJSONError with NaN values in write_data by converting to object dtype before fillna
+
 ### v1.1.3 (2024)
-- Fixed: pd.NA values now properly sanitized to None in list and dict output formats
+- Fixed: pd.NA values sanitized to None in list/dict formats
 
 ### v1.1.2 (2024)
-- Changed: Package renamed to `smartspread` (no underscore) for cleaner imports
-- Added: Backwards compatibility for `from smart_spread import ...` with deprecation warning
+- Changed: Package renamed to smartspread (no underscore)
 
 ### v1.1.1 (2024)
-- Fixed: JSON serialization error when using `data_format="list"` with nullable Int64 columns containing `pd.NA` values
-
-## License
-
-MIT License - see LICENSE file for details.
+- Fixed: JSON serialization with Int64 columns containing pd.NA
 
 ## Links
 
-- [GitHub Repository](https://github.com/Redundando/smart_spread)
-- [PyPI Package](https://pypi.org/project/smartspread/)
+- GitHub: https://github.com/Redundando/smart_spread
+- PyPI: https://pypi.org/project/smartspread/
+- License: MIT

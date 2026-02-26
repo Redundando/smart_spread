@@ -196,7 +196,7 @@ class SmartTab:
     def _data_as_list(self) -> list[list]:
         if isinstance(self.data, pd.DataFrame):
             # Replace NaN/None with empty strings for Google Sheets compatibility
-            df_clean = self.data.fillna("")
+            df_clean = self.data.astype(object).fillna("")
             values = [df_clean.columns.tolist()] + df_clean.values.tolist()
         elif isinstance(self.data, list) and all(isinstance(row, dict) for row in self.data):
             keys = list(self.data[0].keys())
@@ -337,6 +337,9 @@ class SmartTab:
                 if update_column not in df.columns:
                     # Add the update column if it doesn't exist
                     df[update_column] = None
+                # Cast to object dtype if assigning non-numeric value to numeric column
+                if df[update_column].dtype != object and not isinstance(update_value, (int, float, type(None))):
+                    df[update_column] = df[update_column].astype(object)
                 df.at[row_index, update_column] = update_value
 
         # Update self.data to reflect changes
