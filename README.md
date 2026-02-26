@@ -133,6 +133,9 @@ tab.refresh()  # Reload from Sheets after external changes
 
 ## Changelog
 
+### v1.1.5 (2024)
+- Fixed: InvalidJSONError with NaN values in dict format by sanitizing in _data_as_list dict branch
+
 ### v1.1.4 (2024)
 - Fixed: TypeError when writing strings to float64 columns in update_row_by_column_pattern
 - Fixed: InvalidJSONError with NaN values in write_data by converting to object dtype before fillna

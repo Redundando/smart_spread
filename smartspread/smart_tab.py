@@ -200,7 +200,7 @@ class SmartTab:
             values = [df_clean.columns.tolist()] + df_clean.values.tolist()
         elif isinstance(self.data, list) and all(isinstance(row, dict) for row in self.data):
             keys = list(self.data[0].keys())
-            values = [keys] + [[row.get(k, "") for k in keys] for row in self.data]
+            values = [keys] + [[("" if pd.isna(v) else v) for v in (row.get(k, "") for k in keys)] for row in self.data]
         elif isinstance(self.data, list) and all(isinstance(row, list) for row in self.data):
             values = self.data
         else:
